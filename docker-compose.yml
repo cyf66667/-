@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: luye_api
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app               # 映射代码目录
+      - ./logs:/app/logs     # 【新增】将容器内的 logs 文件夹映射到外面的 logs 文件夹
