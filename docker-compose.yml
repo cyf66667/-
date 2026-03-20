@@ -10,3 +10,5 @@ services:
     volumes:
       - .:/app               # 映射代码目录
       - ./logs:/app/logs     # 【新增】将容器内的 logs 文件夹映射到外面的 logs 文件夹
+
+      #只需要敲一行docker-compose up -d就可以让docker自动配置好文件
