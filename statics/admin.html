@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>鹿野养成计划 - 数据大盘</title>
     <style>
+        /* 这里完全保留你之前的样式 */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f5f7; padding: 20px; color: #333; }
         h2 { margin-bottom: 20px; }
         .cards { display: flex; gap: 20px; margin-bottom: 20px; }
@@ -16,83 +17,89 @@
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
         th { background-color: #fafafa; color: #666; font-weight: 600; }
         tr:hover { background-color: #f9f9f9; }
+
+        /* --- 新增：弹窗专属样式（不影响你之前的界面） --- */
+        .user-row { cursor: pointer; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: #fff; padding: 25px; border-radius: 12px; width: 400px; position: relative; }
+        .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 20px; color: #999; }
+        .history-item { padding: 8px 0; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; font-size: 14px; }
     </style>
 </head>
 <body>
-    <h2>🦌 鹿野养成计划 - 实时数据大盘</h2>
+    <h2>🦌 鹿野养成计划 - 数据大盘</h2>
     <div class="cards">
-        <div class="card">
-            <div class="card-title">总注册用户</div>
-            <div class="card-value" id="total-users">0 人</div>
-        </div>
-        <div class="card green">
-            <div class="card-title">今日互动活跃</div>
-            <div class="card-value" id="online-users">0 人</div>
-        </div>
-        <div class="card purple">
-            <div class="card-title">今日日期</div>
-            <div class="card-value" id="today-date">加载中...</div>
-        </div>
+        <div class="card"><div class="card-title">总注册用户</div><div class="card-value" id="total-users">0 人</div></div>
+        <div class="card green"><div class="card-title">今日互动活跃</div><div class="card-value" id="online-users">0 人</div></div>
+        <div class="card purple"><div class="card-title">今日日期</div><div class="card-value" id="today-date">加载中...</div></div>
     </div>
 
     <table>
         <thead>
-            <tr>
-                <th>用户 ID</th>
-                <th>昵称</th>
-                <th>鹿野状态</th>
-                <th>最后操作时间</th>
-                <th>今日互动次数</th>
-                <th>饥饿 / 口渴值</th>
-            </tr>
+            <tr><th>用户 ID</th><th>昵称</th><th>鹿野状态</th><th>最后操作时间</th><th>今日互动次数</th><th>饥饿 / 口渴值</th></tr>
         </thead>
-        <tbody id="user-table-body">
-            </tbody>
+        <tbody id="user-table-body"></tbody>
     </table>
 
-    <script>
-        // 设置今日日期
-        const dateStr = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
-        document.getElementById('today-date').innerText = dateStr;
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">×</span>
+            <h3 id="modal-title">操作历史</h3>
+            <div id="modal-history"></div>
+        </div>
+    </div>
 
-        // 向后端 API 拉取数据并渲染
+    <script>
+        document.getElementById('today-date').innerText = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        // --- 新增：用于存放拉取到的临时数据，给弹窗用 ---
+        let currentUsers = []; 
+
         async function fetchDashboardData() {
             try {
                 const response = await fetch('/api/dashboard');
                 const data = await response.json();
+                currentUsers = data.users; // 保存到全局变量
 
-                // 更新顶部卡片
                 document.getElementById('total-users').innerText = data.total_users + ' 人';
                 document.getElementById('online-users').innerText = data.active_users + ' 人';
 
-                // 更新表格
                 const tbody = document.getElementById('user-table-body');
-                tbody.innerHTML = ''; // 清空旧数据
-
-                data.users.forEach(user => {
-                    // 智能判断鹿野状态
-                    let status = "🟢 状态良好";
-                    if (user.hunger > 70 || user.thirst > 70) status = "🔴 极度饥渴";
-                    else if (user.hunger > 40 || user.thirst > 40) status = "🟡 需要照顾";
-
-                    const row = `
-                        <tr>
-                            <td># ${user.user_id}</td>
-                            <td>${user.nickname}</td>
-                            <td>${status}</td>
-                            <td>${user.last_updated || '<span style="color:#ccc;">暂无操作</span>'}</td>
-                            <td>${user.actions_today} 次</td>
+                tbody.innerHTML = data.users.map(user => {
+                    let status = (user.hunger > 40 || user.thirst > 40) ? "🟡 需要照顾" : "🟢 状态良好";
+                    return `
+                        <tr class="user-row" onclick="openModal(${user.user_id})">
+                            <td># ${user.user_id}</td><td>${user.nickname}</td><td>${status}</td>
+                            <td>${user.last_updated || '暂无'}</td><td>${user.actions_today} 次</td>
                             <td>🍔 ${user.hunger} / 💧 ${user.thirst}</td>
-                        </tr>
-                    `;
-                    tbody.innerHTML += row;
-                });
-            } catch (error) {
-                console.error("数据拉取失败:", error);
-            }
+                        </tr>`;
+                }).join('');
+            } catch (error) { console.error("数据拉取失败:", error); }
         }
 
-        // 立即拉取一次，然后每 3 秒钟自动刷新一次数据！
+        // --- 新增：处理弹窗的两个函数 ---
+        function openModal(userId) {
+            const user = currentUsers.find(u => u.user_id === userId);
+            if (!user) return;
+            document.getElementById('modal-title').innerText = `${user.nickname} 的照顾日记`;
+            const histDiv = document.getElementById('modal-history');
+            
+            if (user.history && user.history.length > 0) {
+                histDiv.innerHTML = user.history.map(h => `
+                    <div class="history-item">
+                        <span style="color:#888">${h.time.split(' ')[1]}</span>
+                        <span>${h.action}</span>
+                    </div>`).join('');
+            } else {
+                histDiv.innerHTML = '<p style="color:#999;text-align:center">暂无记录</p>';
+            }
+            document.getElementById('userModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('userModal').style.display = 'none';
+        }
+
         fetchDashboardData();
         setInterval(fetchDashboardData, 3000);
     </script>

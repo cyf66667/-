@@ -5,7 +5,7 @@ import threading
 from datetime import datetime
 
 # 在 Docker 的桥接网络中，直接使用服务名 'api' 即可访问后端
-API_BASE_URL = "http://api:8000"
+BASE_URL = "http://luye_api:8000"  # 注意：把 127.0.0.1 换成了 luye_api
 
 def simulate_user_behavior(user_id, nickname):
     """模拟单个虚拟玩家的行为"""
@@ -20,7 +20,7 @@ def simulate_user_behavior(user_id, nickname):
                 for _ in range(actions_count):
                     # 随机选择喂饭还是喂水
                     action = random.choice(["feed", "water"])
-                    url = f"{API_BASE_URL}/activity/{action}/{user_id}"
+                    url = f"{BASE_URL}/activity/{action}/{user_id}"
                     
                     # 向 API 发送动作指令
                     response = requests.post(url)
