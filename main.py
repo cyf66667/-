@@ -131,4 +131,16 @@ def water(user_id: int):
         "timestamp": exact_time_str  # 在返回值中带上具体时间
     }
 
+# --- 数据大盘接口（前端网页从这里拉取最新数据） ---
+@app.get("/api/dashboard")
+def get_dashboard_data():
+    # 统计今天有互动的活跃玩家
+    active_users = sum(1 for u in mock_users_data.values() if u["actions_today"] > 0)
+    
+    return {
+        "total_users": len(mock_users_data),
+        "active_users": active_users,
+        "users": list(mock_users_data.values()) # 把所有玩家的数据变成列表发给前端
+    }
+
 app.mount("/dashboard", StaticFiles(directory="statics", html=True), name="statics")
